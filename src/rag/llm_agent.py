@@ -70,6 +70,19 @@ class GeminiTrader:
         _save_cache(self.cache)
         return result
 
+    def _parse_response(self, raw):
+        """Extract and parse JSON from raw response text, tolerating extra output."""
+        raw = raw.strip()
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            print("Cleaning JSON output...")
+            start = raw.find("{")
+            end = raw.rfind("}")
+            if start != -1 and end != -1 and end > start:
+                return json.loads(raw[start:end + 1])
+            return {**FALLBACK, "reasoning": "JSON parse failed"}
+
     def _call_gemini(self, prompt, max_retries=3):
         for attempt in range(max_retries):
             try:
@@ -82,14 +95,18 @@ class GeminiTrader:
                         "max_output_tokens": 150,
                     },
                 )
-                result = json.loads(response.text)
+                result = self._parse_response(response.text)
                 time.sleep(self.sleep_time)
                 return result
             except Exception as e:
-                if "429" in str(e) or "ResourceExhausted" in str(e):
+                err = str(e)
+                if "429" in err or "ResourceExhausted" in err:
                     wait = 60 * (attempt + 1)
                     print(f"Rate limited. Waiting {wait}s...")
                     time.sleep(wait)
+                elif "503" in err or "Service Unavailable" in err or "UNAVAILABLE" in err:
+                    print(f"Server busy, retrying... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(30)
                 else:
                     print(f"Gemini error: {e}")
                     return {**FALLBACK, "reasoning": f"error: {e}"}

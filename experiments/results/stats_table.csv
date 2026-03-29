@@ -1,0 +1,4 @@
+condition,kurtosis,acf_sq_lag1,acf_abs_lag1,adf_pvalue,jarque_bera_p
+Baseline,1.0543,0.4869,0.5081,0.3473,0.0116
+Random News,3.4555,0.6176,0.7035,0.9678,0.0
+Gemini RAG,1.9489,0.2589,0.3931,0.0451,0.006
